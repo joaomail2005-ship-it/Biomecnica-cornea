@@ -21,30 +21,30 @@ import numpy as np
 import math as math
 
 #CRIANDO MALHA E MATERIAIS
-def criar_malha(devFact,minSizeFact,elementSize):
-    mdb.models['Model-1'].parts['Part-1'].setMeshControls(algorithm=MEDIAL_AXIS, 
-        regions=mdb.models['Model-1'].parts['Part-1'].cells[:]
+def criar_malha(modelo,model_part,devFact,minSizeFact,elementSize):
+    model_part.setMeshControls(algorithm=MEDIAL_AXIS, 
+        regions=model_part.cells[:]
         , technique=SWEEP)
     
-    mdb.models['Model-1'].parts['Part-1'].seedPart(deviationFactor=devFact, 
+    model_part.seedPart(deviationFactor=devFact, 
         minSizeFactor=minSizeFact, size=elementSize)
-    mdb.models['Model-1'].parts['Part-1'].generateMesh()
+    model_part.generateMesh()
 
-def criar_materiais_linElastico(Esaudavel, Rsaudavel, Efraco, Rfraco):
+def criar_materiais_linElastico(modelo,model_part,Esaudavel, Rsaudavel, Efraco, Rfraco):
 
-    part = mdb.models['Model-1'].parts['Part-1']
+    part = model_part
 
     # Material saudável 
-    mdb.models['Model-1'].Material(name='Speavk')
-    mdb.models['Model-1'].materials['Speavk'].Elastic(table=((Esaudavel, Rsaudavel), ))
-    mdb.models['Model-1'].HomogeneousSolidSection(material='Speavk', name='Section-1', thickness=None)
+    modelo.Material(name='Speavk')
+    modelo.materials['Speavk'].Elastic(table=((Esaudavel, Rsaudavel), ))
+    modelo.HomogeneousSolidSection(material='Speavk', name='Section-1', thickness=None)
     part.Set(cells=part.cells[:], name='Set-3')
     part.SectionAssignment(offset=0.0, offsetField='', offsetType=MIDDLE_SURFACE,
         region=part.sets['Set-3'], sectionName='Section-1', thicknessAssignment=FROM_SECTION)
 
     # Material enfraquecido 
-    mdb.models['Model-1'].Material(name='Enfraquecido')
-    mdb.models['Model-1'].materials['Enfraquecido'].Elastic(table=((Efraco, Rfraco), ))
-    mdb.models['Model-1'].HomogeneousSolidSection(material='Enfraquecido', name='Section-2', thickness=None)
+    modelo.Material(name='Enfraquecido')
+    modelo.materials['Enfraquecido'].Elastic(table=((Efraco, Rfraco), ))
+    modelo.HomogeneousSolidSection(material='Enfraquecido', name='Section-2', thickness=None)
     part.SectionAssignment(offset=0.0, offsetField='', offsetType=MIDDLE_SURFACE,
         region=part.sets['Fraqueza'], sectionName='Section-2', thicknessAssignment=FROM_SECTION)

@@ -64,7 +64,7 @@ def calculo_cordenadas(S,H,L):
     return [p1, p2, c1, p3, p4, c2]
 
 #CRIANDO GEOMETRIA INICIAL
-def cria_geometria(model,cord_iniciais,L):
+def cria_geometria(modelo,nome_part,cord_iniciais,L):
     
     p1 = cord_iniciais[0]
     p2 = cord_iniciais[1]
@@ -74,15 +74,15 @@ def cria_geometria(model,cord_iniciais,L):
     c2 = cord_iniciais[5]
     
     #Cria sketch
-    model.ConstrainedSketch(name='__profile__', sheetSize=200.0)
+    modelo.ConstrainedSketch(name='__profile__', sheetSize=200.0)
 
     #Linha de construção
-    model.sketches['__profile__'].ConstructionLine(point1=(0.0, 
+    modelo.sketches['__profile__'].ConstructionLine(point1=(0.0, 
         -100.0), point2=(0.0, 100.0))
-    model.sketches['__profile__'].FixedConstraint(entity=
-        model.sketches['__profile__'].geometry[2])
+    modelo.sketches['__profile__'].FixedConstraint(entity=
+        modelo.sketches['__profile__'].geometry[2])
 
-    sketch = mdb.models['Model-1'].sketches['__profile__']
+    sketch = modelo.sketches['__profile__']
     
     sketch.ArcByCenterEnds(center=c1, point1=p1, point2=p2, direction=CLOCKWISE)
     sketch.ArcByCenterEnds(center=c2, point1=p3, point2=p4, direction=CLOCKWISE)
@@ -91,33 +91,33 @@ def cria_geometria(model,cord_iniciais,L):
     sketch.Line(point1=p4, point2=p2)
     
     #Finaliza sketch
-    mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Part-1', type=
+    modelo.Part(dimensionality=THREE_D, name=nome_part, type=
         DEFORMABLE_BODY)
 
     #Faz o revolution criando a geometria 3D
-    mdb.models['Model-1'].parts['Part-1'].BaseSolidRevolve(angle=360.0, 
+    modelo.parts[nome_part].BaseSolidRevolve(angle=360.0, 
         flipRevolveDirection=OFF, sketch=
-        mdb.models['Model-1'].sketches['__profile__'])
-    del mdb.models['Model-1'].sketches['__profile__']
+        modelo.sketches['__profile__'])
+    del modelo.sketches['__profile__']
 
     #Cria partição cortando ao meio
-    mdb.models['Model-1'].parts['Part-1'].PartitionCellByPlaneThreePoints(cells=
-        mdb.models['Model-1'].parts['Part-1'].cells.getSequenceFromMask(('[#1 ]', 
-        ), ), point1=mdb.models['Model-1'].parts['Part-1'].InterestingPoint(
-        mdb.models['Model-1'].parts['Part-1'].edges[2], MIDDLE), point2=
-        mdb.models['Model-1'].parts['Part-1'].vertices[3], point3=
-        mdb.models['Model-1'].parts['Part-1'].vertices[0])
+    modelo.parts[nome_part].PartitionCellByPlaneThreePoints(cells=
+        modelo.parts[nome_part].cells.getSequenceFromMask(('[#1 ]', 
+        ), ), point1=modelo.parts[nome_part].InterestingPoint(
+        modelo.parts[nome_part].edges[2], MIDDLE), point2=
+        modelo.parts[nome_part].vertices[3], point3=
+        modelo.parts[nome_part].vertices[0])
 
     # Sketch partition face na face que corta a peça ao meio
-    mdb.models['Model-1'].ConstrainedSketch(
+    modelo.ConstrainedSketch(
         gridSpacing=0.59, 
         name='__profile__',      
         sheetSize=23.73, 
         transform=
-            mdb.models['Model-1'].parts['Part-1'].MakeSketchTransform(
-                sketchPlane=mdb.models['Model-1'].parts['Part-1'].faces[0],  
+            modelo.parts[nome_part].MakeSketchTransform(
+                sketchPlane=modelo.parts[nome_part].faces[0],  
                 sketchPlaneSide=SIDE1,
-                sketchUpEdge=mdb.models['Model-1'].parts['Part-1'].edges[4],  
+                sketchUpEdge=modelo.parts[nome_part].edges[4],  
                 sketchOrientation=RIGHT,
                 origin=(0.0, 0.0, 0.0)  
             )
@@ -126,9 +126,9 @@ def cria_geometria(model,cord_iniciais,L):
     print("linha 79 ok")
     
     # Projeta as arestas coplanares da peça no sketch
-    mdb.models['Model-1'].parts['Part-1'].projectReferencesOntoSketch(
+    modelo.parts[nome_part].projectReferencesOntoSketch(
         filter=COPLANAR_EDGES, 
-        sketch=mdb.models['Model-1'].sketches['__profile__']
+        sketch=modelo.sketches['__profile__']
     )
 
     # Cria um arco definido por 3 pontos (em metade da peça)
@@ -142,43 +142,43 @@ def cria_geometria(model,cord_iniciais,L):
     
     pmid = encontraPmidCirc((-p5[1],-p5[0]),(-p6[1],-p6[0]),c2)
     #print(p5,p6,c2,pmid)
-    mdb.models['Model-1'].sketches['__profile__'].ArcByCenterEnds(center=(-c2[1],c2[0]), point1=p5, point2=p6, direction=CLOCKWISE)
+    modelo.sketches['__profile__'].ArcByCenterEnds(center=(-c2[1],c2[0]), point1=p5, point2=p6, direction=CLOCKWISE)
 
     # Particiona uma face da peça usando o sketch criado
-    mdb.models['Model-1'].parts['Part-1'].PartitionFaceBySketch(
-        faces=mdb.models['Model-1'].parts['Part-1'].faces[0],
-        sketch=mdb.models['Model-1'].sketches['__profile__'],
-        sketchUpEdge=mdb.models['Model-1'].parts['Part-1'].edges[4]
+    modelo.parts[nome_part].PartitionFaceBySketch(
+        faces=modelo.parts[nome_part].faces[0],
+        sketch=modelo.sketches['__profile__'],
+        sketchUpEdge=modelo.parts[nome_part].edges[4]
     )
         
     print("linha 114 ok")
     # Deleta o sketch após uso
-    del mdb.models['Model-1'].sketches['__profile__']
+    del modelo.sketches['__profile__']
     
     # Particiona células varrendo uma aresta tendo como caminho as bordas da geometira (separando a espessura em duas camadas)
-    edge = mdb.models['Model-1'].parts['Part-1'].edges.findAt((pmid[0], pmid[1], 0.0))
+    edge = modelo.parts[nome_part].edges.findAt((pmid[0], pmid[1], 0.0))
 
-    mdb.models['Model-1'].parts['Part-1'].PartitionCellBySweepEdge(
-        cells=mdb.models['Model-1'].parts['Part-1'].cells.getSequenceFromMask(('[#3 ]',)),
+    modelo.parts[nome_part].PartitionCellBySweepEdge(
+        cells=modelo.parts[nome_part].cells.getSequenceFromMask(('[#3 ]',)),
         edges=(edge,), 
-        sweepPath=mdb.models['Model-1'].parts['Part-1'].edges.findAt((0, p4[1], p4[0]))
+        sweepPath=modelo.parts[nome_part].edges.findAt((0, p4[1], p4[0]))
     )
     
 
     # Outra partição por varredura (repete o processo acima para a outra metade da peça)
-    edge = mdb.models['Model-1'].parts['Part-1'].edges.findAt((pmid[0], pmid[1], 0.0))
+    edge = modelo.parts[nome_part].edges.findAt((pmid[0], pmid[1], 0.0))
 
-    mdb.models['Model-1'].parts['Part-1'].PartitionCellBySweepEdge(
-        cells=mdb.models['Model-1'].parts['Part-1'].cells.getSequenceFromMask(('[#3 ]',)),
+    modelo.parts[nome_part].PartitionCellBySweepEdge(
+        cells=modelo.parts[nome_part].cells.getSequenceFromMask(('[#3 ]',)),
         edges=(edge,), 
-        sweepPath=mdb.models['Model-1'].parts['Part-1'].edges.findAt((0, p4[1], -p4[0]))
+        sweepPath=modelo.parts[nome_part].edges.findAt((0, p4[1], -p4[0]))
     )
 
     #Cria partição que corta a geometria em outra metade, deixando com 4 partes quando vista de cima ou de baixo
-    mdb.models['Model-1'].parts['Part-1'].PartitionCellByPlaneThreePoints(cells=
-        mdb.models['Model-1'].parts['Part-1'].cells.getSequenceFromMask(('[#f ]', 
-        ), ), point1=mdb.models['Model-1'].parts['Part-1'].InterestingPoint(
-        mdb.models['Model-1'].parts['Part-1'].edges[14], MIDDLE), point2=
-        mdb.models['Model-1'].parts['Part-1'].vertices[7], point3=
-        mdb.models['Model-1'].parts['Part-1'].InterestingPoint(
-        mdb.models['Model-1'].parts['Part-1'].edges[4], MIDDLE))
+    modelo.parts[nome_part].PartitionCellByPlaneThreePoints(cells=
+        modelo.parts[nome_part].cells.getSequenceFromMask(('[#f ]', 
+        ), ), point1=modelo.parts[nome_part].InterestingPoint(
+        modelo.parts[nome_part].edges[14], MIDDLE), point2=
+        modelo.parts[nome_part].vertices[7], point3=
+        modelo.parts[nome_part].InterestingPoint(
+        modelo.parts[nome_part].edges[4], MIDDLE))

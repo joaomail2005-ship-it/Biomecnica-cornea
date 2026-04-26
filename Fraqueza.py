@@ -21,7 +21,7 @@ import numpy as np
 import math as math
 
 
-def criar_fraqueza(cord_iniciais, pfraq, rfraq, S, L):
+def criar_fraqueza(modelo,model_part,cord_iniciais, pfraq, rfraq, S, L):
 
     p1 = cord_iniciais[0]
     p2 = cord_iniciais[1]
@@ -30,7 +30,7 @@ def criar_fraqueza(cord_iniciais, pfraq, rfraq, S, L):
     p4 = cord_iniciais[4]
     c2 = cord_iniciais[5]
 
-    part = mdb.models['Model-1'].parts['Part-1']
+    part = model_part
 
     # Raio externo e interno
     R_outer = ((p1[0]-c1[0])**2 + (p1[1]-c1[1])**2) ** 0.5
@@ -56,7 +56,7 @@ def criar_fraqueza(cord_iniciais, pfraq, rfraq, S, L):
     )[0][0]
 
     # Sketch com círculo centrado na origem do plano
-    mdb.models['Model-1'].ConstrainedSketch(
+    modelo.ConstrainedSketch(
         gridSpacing=0.91, name='__profile__', sheetSize=36.59,
         transform=part.MakeSketchTransform(
             sketchPlane=part.datums[datum_plane_id],
@@ -66,7 +66,7 @@ def criar_fraqueza(cord_iniciais, pfraq, rfraq, S, L):
             origin=(pfraq[0], pfraq[1], pfraq[2])
         )
     )
-    mdb.models['Model-1'].sketches['__profile__'].CircleByCenterPerimeter(
+    modelo.sketches['__profile__'].CircleByCenterPerimeter(
         center=(0.0, 0.0), point1=(0.0, rfraq)
     )
 
@@ -76,12 +76,12 @@ def criar_fraqueza(cord_iniciais, pfraq, rfraq, S, L):
             xMin=-100, yMin=-100, zMin=-100,
             xMax= 100, yMax= 100, zMax= 100
         ),
-        sketch=mdb.models['Model-1'].sketches['__profile__'],
+        sketch=modelo.sketches['__profile__'],
         sketchPlane=part.datums[datum_plane_id],
         sketchPlaneSide=SIDE1,
         sketchUpEdge=aresta_ref
     )
-    del mdb.models['Model-1'].sketches['__profile__']
+    del modelo.sketches['__profile__']
 
     # Direção do eixo normalizada
     dx = pfraq[0] - c1[0]

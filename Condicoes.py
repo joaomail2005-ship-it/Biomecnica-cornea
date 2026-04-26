@@ -63,20 +63,20 @@ def encontra_faces(inst,p1,p2):
     
     return faces_seq
 #CRIANDO CONDIÇÕES DE CONTORNO E APLICANDO PRESSÃO
-def aplicar_condicoes(press,S,L, rfraq, pfraq, cord_iniciais,pontos_fraq):
+def aplicar_condicoes(modelo,model_part,press,S,L, rfraq, pfraq, cord_iniciais,pontos_fraq):
 
     p1 = cord_iniciais[0]
     p2 = cord_iniciais[1]
     p4 = cord_iniciais[4]
 
     # Assembly
-    mdb.models['Model-1'].rootAssembly.DatumCsysByDefault(CARTESIAN)
-    mdb.models['Model-1'].rootAssembly.Instance(
+    modelo.rootAssembly.DatumCsysByDefault(CARTESIAN)
+    modelo.rootAssembly.Instance(
         dependent=ON, name='Part-1-1',
-        part=mdb.models['Model-1'].parts['Part-1']
+        part=model_part
     )
 
-    inst = mdb.models['Model-1'].rootAssembly.instances['Part-1-1']
+    inst = modelo.rootAssembly.instances['Part-1-1']
 
     print("Pontos contorno: ")
     pmid1 = encontraPmidCirc((p2[0], 0), (0, p2[0]), (0, 0))
@@ -97,19 +97,19 @@ def aplicar_condicoes(press,S,L, rfraq, pfraq, cord_iniciais,pontos_fraq):
     faces_seq = encontra_faces(inst,(pmid3[0],pmid3[1]-0.2,pmid3[2]),
                   (pmid3[0],pmid3[1]+0.2,pmid3[2]))
     
-    mdb.models['Model-1'].EncastreBC(
+    modelo.EncastreBC(
         createStepName='Initial',
         localCsys=None,
         name='BC-1',
         region=Region(faces = faces_seq)
     )
 
-    mdb.models['Model-1'].StaticStep(name='Step-1', previous='Initial')
+    modelo.StaticStep(name='Step-1', previous='Initial')
     
     faces_seq = encontra_faces(inst,(pontos_fraq[1][0]-0.2,pontos_fraq[1][1]-S,pontos_fraq[1][2]-0.2),
                   (pontos_fraq[1][0]+0.2,pontos_fraq[1][1]-S,pontos_fraq[1][2]+0.2))
     
-    mdb.models['Model-1'].Pressure(
+    modelo.Pressure(
         amplitude=UNSET, createStepName='Step-1',
         distributionType=UNIFORM, field='',
         magnitude=press, name='Load-1',
