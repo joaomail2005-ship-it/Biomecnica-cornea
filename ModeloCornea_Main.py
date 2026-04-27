@@ -34,20 +34,16 @@ except ImportError as e:
 
 '''
     - entender melhor fomra de escolher e tirar dados do job
-    - colocar o for para rodar o mesmo tanto de vezes que de variáveis
 '''
 def main():
-    # Parâmetros que variam a cada iteração
     posfraq = (0, 1, 1)
     matfraq = (7.8, 7.8, 14.3)
     
-    # Loop ajustado para 3 iterações (índices 0, 1 e 2)
     for i in range(3):
         nome_modelo = "Modelo_Simulacao_{}".format(i)
         nome_part = "Part-1" 
         nome_job = "Job_Simulacao_{}".format(i)
         
-        # 2. Criação do Modelo no Abaqus
         if nome_modelo not in mdb.models:
             mdb.Model(name=nome_modelo)
 
@@ -86,7 +82,6 @@ def main():
         mat = parametros["material"]
         carga = parametros["carga"]
 
-        # 3. Chamada das funções passando 'nome_modelo' e 'nome_part'
         cord_iniciais = geometria.calculo_cordenadas(
             geo["S"], geo["H"], geo["L"]
         )

@@ -17,30 +17,25 @@ from visualization import *
 from connectorBehavior import *
 
 import numpy as np
-
 import math as math
 
 def encontraPmidCirc(p1,p2,c):
-  x = (p1[0]+p2[0])/2
-  
-  r = pow(p1[0]-c[0],2) + pow(p1[1]-c[1],2)
-
-  y = c[1] + pow(r - pow(x - c[0],2),0.5)
-
-  pmid = (x,y)
-
-  return pmid
+    x = (p1[0]+p2[0])/2
+    r = pow(p1[0]-c[0],2) + pow(p1[1]-c[1],2)
+    y = c[1] + pow(r - pow(x - c[0],2),0.5)
+    pmid = (x,y)
+    return pmid
 
 def indices_para_mask(indices):
-            """Converte lista de índices de edge no formato de máscara do Abaqus."""
-            if not indices:
-                return ('[#0 ]',)
-            n_words = (max(indices) // 32) + 1
-            words = [0] * n_words
-            for i in indices:
-                words[i // 32] |= (1 << (i % 32))
-            mask_str = '[' + ' '.join('#%x' % w for w in words) + ' ]'
-            return (mask_str,)
+    """Converte lista de índices de edge no formato de máscara do Abaqus."""
+    if not indices:
+        return ('[#0 ]',)
+    n_words = (max(indices) // 32) + 1
+    words = [0] * n_words
+    for i in indices:
+        words[i // 32] |= (1 << (i % 32))
+    mask_str = '[' + ' '.join('#%x' % w for w in words) + ' ]'
+    return (mask_str,)
 
 def encontra_faces(inst,p1,p2):
     faces_inf = []
@@ -62,12 +57,15 @@ def encontra_faces(inst,p1,p2):
     faces_seq = inst.faces.getSequenceFromMask(mask=mask)
     
     return faces_seq
-#CRIANDO CONDIÇÕES DE CONTORNO E APLICANDO PRESSÃO
+
+# CRIANDO CONDIÇÕES DE CONTORNO E APLICANDO PRESSÃO
 def aplicar_condicoes(modelo,model_part,press,S,L, rfraq, pfraq, cord_iniciais,pontos_fraq):
 
     p1 = cord_iniciais[0]
     p2 = cord_iniciais[1]
+    p3 = cord_iniciais[3]
     p4 = cord_iniciais[4]
+    c2 = cord_iniciais[5]
 
     # Assembly
     modelo.rootAssembly.DatumCsysByDefault(CARTESIAN)
@@ -94,25 +92,53 @@ def aplicar_condicoes(modelo,model_part,press,S,L, rfraq, pfraq, cord_iniciais,p
     )
     print(pmid3)
     
-    faces_seq = encontra_faces(inst,(pmid3[0],pmid3[1]-0.2,pmid3[2]),
+    faces_seq_encastre = encontra_faces(inst,(pmid3[0],pmid3[1]-0.2,pmid3[2]),
                   (pmid3[0],pmid3[1]+0.2,pmid3[2]))
     
     modelo.EncastreBC(
         createStepName='Initial',
         localCsys=None,
         name='BC-1',
-        region=Region(faces = faces_seq)
+        region=Region(faces=faces_seq_encastre)
     )
 
     modelo.StaticStep(name='Step-1', previous='Initial')
     
-    faces_seq = encontra_faces(inst,(pontos_fraq[1][0]-0.2,pontos_fraq[1][1]-S,pontos_fraq[1][2]-0.2),
-                  (pontos_fraq[1][0]+0.2,pontos_fraq[1][1]-S,pontos_fraq[1][2]+0.2))
+    c2_y = c2[1]
+    R_in = ((p3[0] - 0.0)**2 + (p3[1] - c2_y)**2)**0.5
     
+    tol = R_in * 0.01 
+    faces_pressao = []
+
+    # Varre as faces da instância
+    for face in inst.faces:
+        pt_face = face.pointOn[0]
+        dist_face = (pt_face[0]**2 + (pt_face[1] - c2_y)**2 + pt_face[2]**2)**0.5
+        
+        if abs(dist_face - R_in) < tol:
+            face_valida = True
+      
+            for idx_aresta in face.getEdges():
+                aresta = inst.edges[idx_aresta]
+                pt_aresta = aresta.pointOn[0]
+                dist_aresta = (pt_aresta[0]**2 + (pt_aresta[1] - c2_y)**2 + pt_aresta[2]**2)**0.5
+                
+                if abs(dist_aresta - R_in) > tol:
+                    face_valida = False
+                    break
+            
+            if face_valida:
+                faces_pressao.append(face)
+
+    # Converte e aplica a máscara
+    id_faces_pressao = list(set(f.index for f in faces_pressao))
+    mask_pressao = indices_para_mask(id_faces_pressao)
+    faces_seq_pressao = inst.faces.getSequenceFromMask(mask=mask_pressao)
+    
+    # Aplica a pressão
     modelo.Pressure(
         amplitude=UNSET, createStepName='Step-1',
         distributionType=UNIFORM, field='',
         magnitude=press, name='Load-1',
-        region=Region(side1Faces=faces_seq)
-        )
-    
+        region=Region(side1Faces=faces_seq_pressao)
+    )
